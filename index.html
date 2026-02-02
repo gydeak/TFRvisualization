@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="hu">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,40 +13,47 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             padding: 20px;
             background: #f5f5f5;
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
             background: white;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
+
         h1 {
             color: #333;
             margin-bottom: 30px;
             font-size: 28px;
         }
+
         .controls {
             display: flex;
             gap: 30px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
+
         .control-group {
             flex: 1;
             min-width: 250px;
         }
+
         label {
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
             color: #555;
         }
+
         select {
             width: 100%;
             padding: 10px;
@@ -54,37 +62,45 @@
             font-size: 14px;
             background: white;
         }
+
         .radio-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
+
         .radio-item {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .radio-item input[type="radio"] {
+
+        .radio-item input[type="radio"],
+        .radio-item input[type="checkbox"] {
             width: 18px;
             height: 18px;
             cursor: pointer;
         }
+
         .radio-item label {
             margin: 0;
             font-weight: normal;
             cursor: pointer;
         }
+
         #tfr-graph {
             width: 100%;
             height: 600px;
             margin-top: 20px;
         }
+
         .time-buttons {
             display: flex;
             gap: 10px;
             margin-top: 15px;
             flex-wrap: wrap;
         }
+
         .time-button {
             padding: 8px 16px;
             border: 1px solid #007bff;
@@ -95,27 +111,38 @@
             font-size: 14px;
             transition: all 0.2s;
         }
+
         .time-button:hover {
             background: #007bff;
             color: white;
         }
+
         .loading {
             text-align: center;
             padding: 40px;
             color: #666;
         }
+
+        .divergence-controls {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Teljes termékenységi mutató / Total Fertility Rate</h1>
-        
+
         <div class="controls">
             <div class="control-group">
                 <label for="country-select">Ország kiválasztása / Choosing country: (Ctrl+)</label>
                 <select id="country-select" multiple size="8"></select>
             </div>
-            
+
             <div class="control-group">
                 <label>Megjelenített mutató:</label>
                 <div class="radio-group">
@@ -130,6 +157,20 @@
                     <div class="radio-item">
                         <input type="radio" id="tfr-ma13" name="tfr-type" value="tfr_ma_13">
                         <label for="tfr-ma13">13 havi mozgóátlag / 13 months moving average</label>
+                    </div>
+                </div>
+
+                <div class="divergence-controls">
+                    <div class="radio-item">
+                        <input type="checkbox" id="divergence-mode">
+                        <label for="divergence-mode"><strong>Divergencia mód (Közös metszet alapján) / Divergence mode</strong></label>
+                    </div>
+                    <div id="divergence-date-ui"
+                        style="display:none; margin-top: 10px; gap: 10px; align-items: center;">
+                        <label style="display:inline; font-size: 12px;">Bázis / Start date:</label>
+                        <input type="month" id="div-start-date" style="padding: 2px; font-size: 12px;">
+                        <label style="display:inline; font-size: 12px;">Vége / End date:</label>
+                        <input type="month" id="div-end-date" style="padding: 2px; font-size: 12px;">
                     </div>
                 </div>
             </div>
@@ -149,23 +190,21 @@
         let monthlyData = [];
         let currentXRange = null;
 
-        // CSV beolvasása
         Papa.parse('monthly_tfr_by_cohort_with_ma.csv', {
             download: true,
             header: true,
             dynamicTyping: false,
-            complete: function(results) {
+            complete: function (results) {
                 processData(results.data);
             },
-            error: function(error) {
-                document.getElementById('tfr-graph').innerHTML = 
+            error: function (error) {
+                document.getElementById('tfr-graph').innerHTML =
                     '<div class="loading">Hiba a CSV betöltésekor: ' + error.message + '</div>';
             }
         });
 
         function processData(data) {
             monthlyData = data.map(row => {
-                // Dátum létrehozása
                 let date;
                 if (row.date) {
                     date = new Date(row.date);
@@ -182,7 +221,6 @@
                     return null;
                 }
 
-                // TFR értékek konvertálása (vesszőt pontra)
                 const convertValue = (val) => {
                     if (!val) return null;
                     const cleaned = String(val).replace(',', '.');
@@ -199,7 +237,6 @@
                 };
             }).filter(row => row !== null && row.date && !isNaN(row.date.getTime()));
 
-            // Országok listázása
             const countries = [...new Set(monthlyData.map(d => d.geo))].sort();
             const countrySelect = document.getElementById('country-select');
             countries.forEach(country => {
@@ -210,10 +247,35 @@
                 countrySelect.appendChild(option);
             });
 
-            // Event listeners
-            countrySelect.addEventListener('change', updateGraph);
+            countrySelect.addEventListener('change', function() {
+                // Ha divergencia módban vagyunk, törölni kell a currentXRange-t, hogy újrakeresse a közös metszetet
+                if (document.getElementById('divergence-mode').checked) {
+                    currentXRange = null;
+                }
+                updateGraph();
+            });
             document.querySelectorAll('input[name="tfr-type"]').forEach(radio => {
-                radio.addEventListener('change', updateGraph);
+                radio.addEventListener('change', function() {
+                    // Ha divergencia módban vagyunk, törölni kell a currentXRange-t, hogy újrakeresse a közös metszetet
+                    if (document.getElementById('divergence-mode').checked) {
+                        currentXRange = null;
+                    }
+                    updateGraph();
+                });
+            });
+            document.getElementById('divergence-mode').addEventListener('change', function () {
+                document.getElementById('divergence-date-ui').style.display = this.checked ? 'flex' : 'none';
+                if(!this.checked) currentXRange = null; 
+                updateGraph();
+            });
+            
+            document.getElementById('div-start-date').addEventListener('change', function () {
+                currentXRange = [this.value + "-01", document.getElementById('div-end-date').value + "-01"];
+                updateGraph();
+            });
+            document.getElementById('div-end-date').addEventListener('change', function () {
+                currentXRange = [document.getElementById('div-start-date').value + "-01", this.value + "-01"];
+                updateGraph();
             });
 
             updateGraph();
@@ -222,64 +284,155 @@
         function updateGraph() {
             const selectedCountries = Array.from(document.getElementById('country-select').selectedOptions)
                 .map(opt => opt.value);
-            
             const tfrType = document.querySelector('input[name="tfr-type"]:checked').value;
+            const isDivergence = document.getElementById('divergence-mode').checked;
 
             if (selectedCountries.length === 0) {
-                Plotly.newPlot('tfr-graph', [], {
-                    title: 'Nincs kiválasztott ország'
-                });
+                Plotly.newPlot('tfr-graph', [], { title: 'Nincs kiválasztott ország' });
                 return;
             }
 
-            // Szűrés országok szerint
-            let filtered = monthlyData.filter(d => selectedCountries.includes(d.geo));
+            // --- 1. Divergencia logika és dinamikus határok (ha divergencia mód aktív) ---
+            let activeStart = null;
+            let activeEnd = null;
 
-            // Szűrés dátum szerint (ha van zoom)
-            if (currentXRange) {
-                const startDate = new Date(currentXRange[0]);
-                const endDate = new Date(currentXRange[1]);
-                filtered = filtered.filter(d => d.date >= startDate && d.date <= endDate);
+            if (isDivergence) {
+                // Közös metszet keresése az ÖSSZES adatból a kiválasztott országokra
+                const countryDateMaps = selectedCountries.map(country => {
+                    return new Set(monthlyData
+                        .filter(d => d.geo === country && d[tfrType] !== null)
+                        .map(d => d.date.getTime()));
+                });
+
+                let commonTimestamps = [];
+                if (countryDateMaps.length > 0) {
+                    commonTimestamps = [...countryDateMaps[0]];
+                    for (let i = 1; i < countryDateMaps.length; i++) {
+                        commonTimestamps = commonTimestamps.filter(ts => countryDateMaps[i].has(ts));
+                    }
+                }
+                commonTimestamps.sort((a, b) => a - b);
+
+                if (commonTimestamps.length > 0) {
+                    const latestCommon = commonTimestamps[commonTimestamps.length - 1];
+                    let continuousStart = latestCommon;
+                    for (let i = commonTimestamps.length - 1; i > 0; i--) {
+                        const current = new Date(commonTimestamps[i]);
+                        const prev = new Date(commonTimestamps[i - 1]);
+                        const diffMonths = (current.getFullYear() - prev.getFullYear()) * 12 + (current.getMonth() - prev.getMonth());
+                        if (diffMonths === 1) continuousStart = commonTimestamps[i - 1];
+                        else break;
+                    }
+
+                    // Prioritás: Slider/Input > Folytonos metszet
+                    activeStart = currentXRange ? new Date(currentXRange[0]) : new Date(continuousStart);
+                    activeEnd = currentXRange ? new Date(currentXRange[1]) : new Date(latestCommon);
+
+                    const formatToMonth = (date) => date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, '0');
+                    document.getElementById('div-start-date').value = formatToMonth(activeStart);
+                    document.getElementById('div-end-date').value = formatToMonth(activeEnd);
+                } else {
+                    alert("Nincs közös időszak!");
+                    document.getElementById('divergence-mode').checked = false;
+                    updateGraph();
+                    return;
+                }
             }
 
-            // Adatok csoportosítása ország szerint
+            // --- 2. Alapadatok szűrése országok és dátumok szerint ---
+            let filtered = monthlyData.filter(d => selectedCountries.includes(d.geo));
+
+            if (isDivergence && activeStart) {
+                // Divergencia módban: csak a közös metszet időszakára szűrünk
+                filtered = filtered.filter(d => d.date >= activeStart && d.date <= activeEnd);
+            } else if (currentXRange) {
+                // Normál módban: ha van zoom/range beállítás
+                filtered = filtered.filter(d => d.date >= new Date(currentXRange[0]) && d.date <= new Date(currentXRange[1]));
+            }
+
+            // --- 3. Átlag és Bázis kiszámítása (csak divergencia módban) ---
+            let groupAverages = {};
+            let baselineDiffs = {};
+
+            if (isDivergence && activeStart) {
+                const timeMap = {};
+                filtered.forEach(d => {
+                    if (d[tfrType] !== null) {
+                        const ts = d.date.getTime();
+                        if (!timeMap[ts]) timeMap[ts] = [];
+                        timeMap[ts].push(d[tfrType]);
+                    }
+                });
+
+                const sortedTs = Object.keys(timeMap).map(Number).sort((a, b) => a - b);
+                sortedTs.forEach(ts => {
+                    const vals = timeMap[ts];
+                    groupAverages[ts] = vals.reduce((a, b) => a + b, 0) / vals.length;
+                });
+
+                const baseTs = sortedTs[0];
+                selectedCountries.forEach(country => {
+                    const baseRow = filtered.find(d => d.geo === country && d.date.getTime() === baseTs);
+                    if (baseRow) baselineDiffs[country] = baseRow[tfrType] - groupAverages[baseTs];
+                });
+            }
+
+            // --- 4. Görbék létrehozása és Y értékek gyűjtése ---
             const traces = [];
+            let allYValues = []; // Ez az eredeti kód logikája szerint gyűjti az Y értékeket
+
             selectedCountries.forEach(country => {
-                const countryData = filtered.filter(d => d.geo === country);
-                countryData.sort((a, b) => a.date - b.date);
+                const countryData = filtered.filter(d => d.geo === country).sort((a, b) => a.date - b.date);
+                const yValues = countryData.map(d => {
+                    if (d[tfrType] === null) return null;
+                    if (isDivergence) {
+                        return (d[tfrType] - groupAverages[d.date.getTime()]) - (baselineDiffs[country] || 0);
+                    }
+                    return d[tfrType];
+                });
+
+                // Y értékek gyűjtése a skálázáshoz (csak a nem-null értékeket)
+                yValues.forEach(v => { 
+                    if (v !== null) allYValues.push(v); 
+                });
 
                 traces.push({
                     x: countryData.map(d => d.date),
-                    y: countryData.map(d => d[tfrType]),
+                    y: yValues,
                     mode: 'lines+markers',
                     name: country,
-                    type: 'scatter'
+                    type: 'scatter',
+                    connectgaps: true
                 });
             });
 
-            // Y tengely tartomány
-            const allYValues = filtered.map(d => d[tfrType]).filter(v => v !== null);
+            // --- 5. Y tengely range kiszámítása (az ELSŐ kód logikája) ---
             const yMin = Math.min(...allYValues);
             const yMax = Math.max(...allYValues);
             const yPad = (yMax - yMin) * 0.05 || 0.1;
 
+            // --- 6. Layout beállítása ---
             const layout = {
-                xaxis: {
-                    title: 'Dátum',
-                    type: 'date',
+                xaxis: { 
+                    title: 'Dátum', 
+                    type: 'date', 
                     rangeslider: { visible: true }
                 },
                 yaxis: {
-                    title: 'TFR',
-                    range: [yMin - yPad, yMax + yPad]
+                    title: isDivergence ? 'Relatív divergencia' : 'TFR',
+                    range: [yMin - yPad, yMax + yPad], // Mindig beállítjuk a range-t
+                    zeroline: isDivergence
                 },
                 hovermode: 'closest',
                 template: 'plotly_white',
                 margin: { t: 20, r: 20, b: 80, l: 60 }
             };
 
+            // X tengely range beállítása
             if (currentXRange) {
                 layout.xaxis.range = currentXRange;
+            } else if (isDivergence && activeStart) {
+                layout.xaxis.range = [activeStart, activeEnd];
             }
 
             const config = {
@@ -289,8 +442,8 @@
 
             Plotly.newPlot('tfr-graph', traces, layout, config);
 
-            // Zoom esemény kezelése
-            document.getElementById('tfr-graph').on('plotly_relayout', function(eventData) {
+            // --- 7. Zoom esemény kezelése ---
+            document.getElementById('tfr-graph').on('plotly_relayout', function (eventData) {
                 if (eventData['xaxis.range[0]'] && eventData['xaxis.range[1]']) {
                     currentXRange = [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']];
                     updateGraph();
@@ -305,9 +458,8 @@
         }
 
         function setTimeRange(years) {
-            if (years === null) {
-                currentXRange = null;
-            } else {
+            if (years === null) currentXRange = null;
+            else {
                 const endDate = new Date(Math.max(...monthlyData.map(d => d.date)));
                 const startDate = new Date(endDate);
                 startDate.setFullYear(startDate.getFullYear() - years);
