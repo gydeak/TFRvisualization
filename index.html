@@ -147,7 +147,7 @@
                 <label>Megjelenített mutató:</label>
                 <div class="radio-group">
                     <div class="radio-item">
-                        <input type="radio" id="tfr-monthly" name="tfr-type" value="tfr" checked>
+                        <input type="radio" id="tfr-monthly" name="tfr-type" value="tfr">
                         <label for="tfr-monthly">Havi / Monthly</label>
                     </div>
                     <div class="radio-item">
@@ -155,7 +155,7 @@
                         <label for="tfr-ma3">3 havi mozgóátlag / 3 months moving average</label>
                     </div>
                     <div class="radio-item">
-                        <input type="radio" id="tfr-ma13" name="tfr-type" value="tfr_ma_13">
+                        <input type="radio" id="tfr-ma13" name="tfr-type" value="tfr_ma_13" checked>
                         <label for="tfr-ma13">13 havi mozgóátlag / 13 months moving average</label>
                     </div>
                 </div>
@@ -243,7 +243,7 @@
                 const option = document.createElement('option');
                 option.value = country;
                 option.textContent = country;
-                if (country === countries[0]) option.selected = true;
+                if (country === 'HU') option.selected = true;
                 countrySelect.appendChild(option);
             });
 
