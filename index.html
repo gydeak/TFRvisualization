@@ -288,7 +288,7 @@
             const isDivergence = document.getElementById('divergence-mode').checked;
 
             if (selectedCountries.length === 0) {
-                Plotly.newPlot('tfr-graph', [], { title: 'Nincs kiválasztott ország' });
+                Plotly.newPlot('tfr-graph', [], { title: { text: 'Nincs kiválasztott ország' } });
                 return;
             }
 
@@ -411,8 +411,22 @@
             const yMax = Math.max(...allYValues);
             const yPad = (yMax - yMin) * 0.05 || 0.1;
 
+            // --- 5b. Cím összeállítása (letöltéskor is látszódjon a képen) ---
+            const tfrTypeLabels = {
+                tfr: 'havi bontás',
+                tfr_ma_3: '3 havi mozgóátlag',
+                tfr_ma_13: '13 havi mozgóátlag'
+            };
+            const titleText = isDivergence
+                ? `Teljes termékenységi mutató (TFR) – Divergencia, ${tfrTypeLabels[tfrType]}`
+                : `Teljes termékenységi mutató (TFR), ${tfrTypeLabels[tfrType]}`;
+
             // --- 6. Layout beállítása ---
             const layout = {
+                title: {
+                    text: titleText,
+                    font: { size: 20 }
+                },
                 xaxis: { 
                     title: 'Dátum', 
                     type: 'date', 
@@ -425,7 +439,7 @@
                 },
                 hovermode: 'closest',
                 template: 'plotly_white',
-                margin: { t: 20, r: 20, b: 80, l: 60 }
+                margin: { t: 60, r: 20, b: 80, l: 60 }
             };
 
             // X tengely range beállítása
